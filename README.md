@@ -68,8 +68,21 @@ Users can modify the parameter in config.yaml for each Siren layer and frequency
 
 Users cann also custom the input and output dir in sim-chunk.py
 
-To start compression, use 'python sim-chunk.py'
+To start compression, use 
 
-To uncompression, use 'python uncompress.py'
+'''python
+python sim-chunk.py
+'''
+
+To uncompression, use 
+'''python
+python uncompress.py
+'''
 
 The code will output the comparison img as 'out_image.png'
+
+## Results
+![image](https://github.com/user-attachments/assets/bb75fc25-1ad3-46d9-927b-d9147d0fe93f)
+![image](https://github.com/user-attachments/assets/120a3d6f-aee4-4817-8ac9-586f499ab5ab)
+
+
