@@ -147,7 +147,14 @@ def pyramid(savingpath,im,Nchunk,acc_top,acc_L4,acc_L2,optimsig,device,parallel,
     for index1 in tqdm(range(im_topB.shape[-2])):
         for index2 in range(im_topB.shape[-1]):
             fre[...,index1,index2] = fre_pixel(index1,index2,im_topB)
-    sub = np.where(fre>0.3, im_topB, 0)
+    #define decomposition threshold
+    high_fre = 3*fw0_top*(6/5)**0.5
+    low_fre = fw0_top*(6/5)**0.5
+    # Harmonic decomposition
+    sub = np.where(fre>high_fre, im_topB, 0) #high
+    low_part = np.where(fre<low_fre, im_topB, 0) #low
+    mid = fre-sub-low_part #mid
+    ################################################
     for var in range(im_top.shape[0]):
         for level in range(im_top.shape[1]):
             im_top[var,level]=torch.tensor(np.where(fre[var,level]<0.5, im_topB[var,level], im_topB[var,level].mean()))
