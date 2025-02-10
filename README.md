@@ -73,6 +73,7 @@ To start compression, use
 ```python
 python sim-chunk.py
 ```
+This command will output a comparison result with the ground truth.
 
 To uncompression, use 
 ```python
