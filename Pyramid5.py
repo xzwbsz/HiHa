@@ -148,8 +148,9 @@ def pyramid(savingpath,im,Nchunk,acc_top,acc_L4,acc_L2,optimsig,device,parallel,
         for index2 in range(im_topB.shape[-1]):
             fre[...,index1,index2] = fre_pixel(index1,index2,im_topB)
     #define decomposition threshold
-    high_fre = 3*fw0_top*(6/5)**0.5
-    low_fre = fw0_top*(6/5)**0.5
+    cons_norm = 40 # a norm constant due to the normalization
+    high_fre = 3*fw0_top*(6/hidden_size_top)**0.5 # usually 0.3
+    low_fre = fw0_top*(6/hidden_size_top)**0.5/cons_norm # usually 0.1
     # Harmonic decomposition
     sub = np.where(fre>high_fre, im_topB, 0) #high
     low_part = np.where(fre<low_fre, im_topB, 0) #low
