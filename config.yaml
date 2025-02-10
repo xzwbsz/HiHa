@@ -1,0 +1,16 @@
+hidden_size_top : 384 #312
+hidden_size_topres : 256
+hidden_size_L4 : 256
+hidden_size_L2 : 128
+layer_top : 3 #1
+layer_topres : 1
+layer_L4 : 2
+layer_L2 : 1
+fw0_top : 32.
+hw0_top : 32.
+fw0_topres : 32.
+hw0_topres : 16.
+fw0_L4 : 15. 
+hw0_L4 : 15. 
+fw0_L2 : 22.
+hw0_L2 : 16.
