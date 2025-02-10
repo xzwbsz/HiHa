@@ -70,14 +70,14 @@ Users cann also custom the input and output dir in sim-chunk.py
 
 To start compression, use 
 
-'''python
+```python
 python sim-chunk.py
-'''
+```
 
 To uncompression, use 
-'''python
+```python
 python uncompress.py
-'''
+```
 
 The code will output the comparison img as 'out_image.png'
 
