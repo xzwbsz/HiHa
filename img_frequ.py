@@ -10,6 +10,11 @@ import os
 #     for level in range(test1.shape[1]):
 #         test1[var,level] = test1[var,level]/(abs(test1[var,level]).max())
 
+'''
+Using the for loop, the decomposition of the high and low frequencies is carried out line by line
+'''
+
+
 def fre_pixel(x,y,pic):
     #left
     if x==0:
@@ -53,6 +58,7 @@ def fre_pixel(x,y,pic):
             down_fre = ((pic[...,x,y]-pic[...,x-1,y+1])+(pic[...,x,y]-pic[...,x,y+1])+(pic[...,x,y]-pic[...,x+1,y+1]))/3
     Fre = (left_fre+up_fre+right_fre+down_fre)
     return abs(Fre)
+    
 # if os.path.exists('testfre.npy'):
 #     print('读取结果')
 #     fre = np.load('testfre.npy')
