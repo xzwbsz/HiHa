@@ -21,7 +21,7 @@ from img_frequ import fre_pixel
 proj_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(proj_dir)
 
-# 加载配置文件
+# Loading configuration file 加载配置文件
 conf_fp = os.path.join(proj_dir, 'config.yaml')
 with open(conf_fp) as f:
     config = yaml.load(f, Loader=yaml.FullLoader)
@@ -43,6 +43,7 @@ hw0_L4 = config['hw0_L4']  #15. #150.
 fw0_L2 = config['fw0_L2']  #30.
 hw0_L2 = config['hw0_L2']  #30.
 
+# Create 3-D axis data
 def get_data(nscale_x,nscale_y,nscale_z,mask):
     xx,yy,zz = torch.meshgrid(torch.linspace(-1, 1, nscale_x),torch.linspace(-1, 1, nscale_y),torch.linspace(-1, 1, nscale_z),indexing='ij')
     # CooRds = torch.flatten(torch.cat((xx.unsqueeze(0),yy.unsqueeze(0),zz.unsqueeze(0)),0),-3,-1).permute(1,0) #把前三维合并
@@ -52,12 +53,12 @@ def get_data(nscale_x,nscale_y,nscale_z,mask):
         CooRds[idx,:] = torch.masked_select(coords[idx],mask.cpu())
     CooRds = CooRds.permute(1,0)
     return CooRds
-
+# Create non-mask data
 def get_data_nomask(nscale_x,nscale_y,nscale_z):
     xx,yy,zz = torch.meshgrid(torch.linspace(-1, 1, nscale_x),torch.linspace(-1, 1, nscale_y),torch.linspace(-1, 1, nscale_z),indexing='ij')
     CooRds = torch.flatten(torch.cat((xx.unsqueeze(0),yy.unsqueeze(0),zz.unsqueeze(0)),0),-3,-1).permute(1,0) #把前三维合并
     return CooRds
-
+# Create mask data
 def get_mask(input,mask):
     output = torch.ones(input.shape[0],input.shape[1]*input.shape[2]*input.shape[3])
     for idx in range(input.shape[0]):
@@ -66,7 +67,7 @@ def get_mask(input,mask):
 
 def mae(a,b):
     return abs((a-b)**2).mean()
-
+# Divide data into sub-chunks
 def sub_chunk_check(constant,data,target):
     ncale_x_level4 = int(data.shape[1]/constant)
     ncale_y_level4 = int(data.shape[2]/constant)
@@ -94,7 +95,7 @@ def sub_chunk_check(constant,data,target):
             index_z = z
             chunk = ck2
     return index_x,index_y,index_z,chunk,max_res_index
-
+# INR with Laplacian pyramid
 def pyramid(savingpath,im,Nchunk,acc_top,acc_L4,acc_L2,optimsig,device,parallel,succeed,prev_path):
     dir_path = savingpath
     im_top = im.to(device)
@@ -107,14 +108,14 @@ def pyramid(savingpath,im,Nchunk,acc_top,acc_L4,acc_L2,optimsig,device,parallel,
     criterion2 = nn.MSELoss()
     criterion = nn.L1Loss()
     criterion3 = nn.SmoothL1Loss()
-
+ # define the train process
     def train_top(data,Label1,Model,optimizer,sub_item):
         tot_loss = 0
         # data = data
         target = torch.flatten(Label1,-3,-1).permute(1,0)
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
-        output,coords = Model(data) #这里输入训练数据 x5
+        output,coords = Model(data) 
         if sub_item!=None:
             sub_item = sub_item.to(device)
             output = output.view((ncale_x,ncale_y,ncale_z,var_num)).permute(3,0,1,2)
@@ -126,12 +127,12 @@ def pyramid(savingpath,im,Nchunk,acc_top,acc_L4,acc_L2,optimsig,device,parallel,
         # mse = criterion(output, target)
         loss = criterion(output, target) #(((output-target)**2).mean())**0.5  #criterion(output, target) #abs(((output-target)/target).mean()) #criterion2(output,target)
 
-        loss.backward()#反向传播求梯度
-        optimizer.step()#梯度下降
-        # tot_loss += loss.item()#给出最新loss?
+        loss.backward()#calcluate the gradient by backpropagation
+        optimizer.step()#Gradient descent
+        # tot_loss += loss.item()
         return loss.item(), output, SL1loss, minloss
 
-    ###################################### 金字塔顶 ##################################
+    ###################################### top of pyramid ##################################
     lR = 40 #35
     print('lR',lR)
     lr = lR*(1e-5)
@@ -141,7 +142,8 @@ def pyramid(savingpath,im,Nchunk,acc_top,acc_L4,acc_L2,optimsig,device,parallel,
 
     im_topB = np.array(im_top.cpu())
     fre = np.zeros(im_top.shape)
-    print('筛选掉高频区域')
+    print('Making harmonic decomposition')
+    # Harmonic decomposition part
     for index1 in tqdm(range(im_topB.shape[-2])):
         for index2 in range(im_topB.shape[-1]):
             fre[...,index1,index2] = fre_pixel(index1,index2,im_topB)
@@ -224,9 +226,10 @@ def pyramid(savingpath,im,Nchunk,acc_top,acc_L4,acc_L2,optimsig,device,parallel,
     torch.cuda.empty_cache()
     del model_top
 
-    ################### 金字塔顶层替换层 #########################
+    ################### Top of pyramid #########################
 
     im_L4_list = []
+    # make a interpolation
     t11 = torch.nn.functional.interpolate(img_top[None,...], scale_factor=nscale_top, mode='trilinear').squeeze()
     # for plevel in range(ncale_x):
     #         im_L4_list.append(torch.nn.functional.interpolate(img_top[:,None,plevel,...], scale_factor=nscale_top, mode='bilinear'))
@@ -248,27 +251,28 @@ def pyramid(savingpath,im,Nchunk,acc_top,acc_L4,acc_L2,optimsig,device,parallel,
     
     print('top is finished')
 
-    ###################################### 金字塔 level 4 ##############################    
+    ###################################### pyramid level 1 ##############################    
     nscales = 1
     ncale_x_level4 = int(im_top.shape[1]/nscales)
     ncale_y_level4 = int(im_top.shape[2]/nscales)
     ncale_z_level4 = int(im_top.shape[3]/nscales)
 
     # avg3d_4 = torch.nn.AdaptiveAvgPool3d((ncale_x_level4,ncale_y_level4,ncale_z_level4))
-    #池化一下这个图像
+    # polling the image
+    
     # im_L4 = avg3d_4(im_top.unsqueeze(0)).squeeze().to(device)
     n_para = 0
     for chunk_idx in tqdm(range(nscale_top**3)):
-        x,y,z = np.unravel_index(chunk_idx,(nscale_top,nscale_top,nscale_top)) #反索引一下三维矩阵
+        x,y,z = np.unravel_index(chunk_idx,(nscale_top,nscale_top,nscale_top)) #re-index the coordinex of data
         ck1 = im_top[...,int(x/nscale_top*ncale_x_level4):int((x+1)/nscale_top*ncale_x_level4),int(y/nscale_top*ncale_y_level4):int((y+1)/nscale_top*ncale_y_level4),int(z/nscale_top*ncale_z_level4):int((z+1)/nscale_top*ncale_z_level4)]
         ck2 = img_L4[...,int(x/nscale_top*ncale_x_level4):int((x+1)/nscale_top*ncale_x_level4),int(y/nscale_top*ncale_y_level4):int((y+1)/nscale_top*ncale_y_level4),int(z/nscale_top*ncale_z_level4):int((z+1)/nscale_top*ncale_z_level4)]
         # sub_chunk = im_top_LABEL[...,int(x/nscale_top*ncale_x_level4):int((x+1)/nscale_top*ncale_x_level4),int(y/nscale_top*ncale_y_level4):int((y+1)/nscale_top*ncale_y_level4),int(z/nscale_top*ncale_z_level4):int((z+1)/nscale_top*ncale_z_level4)]
         resduil = ck1-ck2 #原先是ck1-ck2
         mmse = abs(resduil).mean() 
-        #找到对应索引的块
+        #find the chunk of the certain index
         # mmse = (resduil**2).mean()
         if mmse > acc_L4:
-        #每一个块重定义一个模型
+        #Define a single model for every chunk
             model_name = savingpath+'/L4_' + str(chunk_idx)+'_' + str(Nchunk)+'.pth'
             model_level_4 = Siren_main(in_features=3,hidden_features=hidden_size_L4,hidden_layers=layer_L4,out_features=5,outermost_linear=True, hidden_omega_0=60.)
             max_epoch = 2000
@@ -313,7 +317,7 @@ def pyramid(savingpath,im,Nchunk,acc_top,acc_L4,acc_L2,optimsig,device,parallel,
             res_path = savingpath + '/res_scho_L4_'+str(chunk_idx)+'_'+str(Nchunk)+'.pkl'
             dic = {'res_var':allmatrix_sp}
             file = open(res_path, 'wb')
-            pickle.dump(dic, file) #转换成稀疏矩阵存储，会小很多
+            pickle.dump(dic, file) #Translate to sparse matrix
 
     # img_L2 = torch.nn.functional.interpolate(img_L4[None,...], scale_factor=2, mode='trilinear')
     # img_L2 = img_L2.squeeze()
@@ -328,7 +332,7 @@ def pyramid(savingpath,im,Nchunk,acc_top,acc_L4,acc_L2,optimsig,device,parallel,
 
     return torch.tensor(im_out)
 
-
+# uncompress process
 def pyramid_uncompress(pthfile,plevel,lat,lon,Nchunk,device,parallel):
 
     var_num = 5
@@ -343,7 +347,7 @@ def pyramid_uncompress(pthfile,plevel,lat,lon,Nchunk,device,parallel):
         trainable_num = sum(p.numel() for p in net.parameters() if p.requires_grad)
         return {'Total': total_num, 'Trainable': trainable_num}
 
-    ###################################### 金字塔顶 ##################################
+    ###################################### top of pyramid ##################################
 
     # model_top = Siren_main( in_features=3,hidden_features=hidden_size_top,hidden_layers=layer_top,out_features=var_num,outermost_linear=True, first_omega_0=fw0_top, hidden_omega_0=hw0_top) 
     model_top = Siren_adaptive(3,var_num,hidden_size_top,layer_top,fw0_top,hw0_top)
@@ -361,7 +365,7 @@ def pyramid_uncompress(pthfile,plevel,lat,lon,Nchunk,device,parallel):
         img_top=out_best.detach().view((ncale_x,ncale_y,ncale_z,var_num)).permute(3,0,1,2)
         del model_top
         torch.cuda.empty_cache()
-############替换1##############
+############substitution1##############
     resfile = pthfile+'/res_top'+str(Nchunk)+'.pkl'
     if os.path.exists(resfile):
         M = pickle.load(open(resfile,'rb'))
@@ -369,7 +373,7 @@ def pyramid_uncompress(pthfile,plevel,lat,lon,Nchunk,device,parallel):
         M = torch.tensor(M.reshape(var_num,ncale_x,ncale_y,ncale_z))
         M = M.to(device)
         img_top += M
-#############残差1############
+#############Residual error 1############
     top_path2 = pthfile+'/pooling_para_res_'+str(Nchunk)+'.pth'
     if os.path.exists(top_path2):
         model_top2 = Siren_adaptive(5,var_num,hidden_size_topres,layer_topres,fw0_topres,hw0_topres)
@@ -379,7 +383,7 @@ def pyramid_uncompress(pthfile,plevel,lat,lon,Nchunk,device,parallel):
         img_top = out_best.detach().view((ncale_x,ncale_y,ncale_z,var_num)).permute(3,0,1,2)
         del model_top2
         torch.cuda.empty_cache()
-############替换2##############
+############substitution2##############
     resfile = pthfile+'/res_topres'+str(Nchunk)+'.pkl'
     if os.path.exists(resfile):
         M = pickle.load(open(resfile,'rb'))
@@ -387,7 +391,7 @@ def pyramid_uncompress(pthfile,plevel,lat,lon,Nchunk,device,parallel):
         M = torch.tensor(M.reshape(var_num,ncale_x,ncale_y,ncale_z))
         M = M.to(device)
         img_top+=M
-###########残差3##############
+###########Residual error 2##############
     top_path3 = pthfile+'/pooling_para_res2_'+str(Nchunk)+'.pth'
     if os.path.exists(top_path3):
         model_top3 = Siren_adaptive(3,var_num,hidden_size_topres,layer_topres,fw0_topres,hw0_topres)
